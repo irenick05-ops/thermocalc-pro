@@ -27,34 +27,54 @@ export default function ReportsPage() {
   });
 
   useEffect(() => {
+    let currentReport = { ...reportData };
+
+    // 1. Charger les données du rapport sauvegardées en premier
     const saved = localStorage.getItem('quantal_report_data');
     if (saved) {
       try {
         const parsedData = JSON.parse(saved);
-        setReportData(prev => ({
-          ...prev,
+        currentReport = {
+          ...currentReport,
           ...parsedData,
           date: parsedData.date || new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })
-        }));
+        };
       } catch (e) {
         console.error('Erreur lors du chargement des données du rapport', e);
       }
     }
 
-    const currentUserStr = localStorage.getItem('quantal_current_user');
-    if (currentUserStr) {
-      try {
-        const currentUser = JSON.parse(currentUserStr);
-        if (currentUser.firstName && currentUser.lastName) {
-          setReportData(prev => ({
-            ...prev,
-            engineerName: `${currentUser.firstName} ${currentUser.lastName}`
-          }));
+    // 2. Récupérer l'utilisateur connecté avec une vérification élargie (clés et formats multiples)
+    const possibleUserKeys = ['quantal_current_user', 'current_user', 'user', 'quantal_user'];
+    let activeUserName = '';
+
+    for (const key of possibleUserKeys) {
+      const userStr = localStorage.getItem(key);
+      if (userStr) {
+        try {
+          const currentUser = JSON.parse(userStr);
+          if (currentUser.firstName && currentUser.lastName) {
+            activeUserName = `${currentUser.firstName} ${currentUser.lastName}`;
+            break;
+          } else if (currentUser.fullName) {
+            activeUserName = currentUser.fullName;
+            break;
+          } else if (currentUser.name) {
+            activeUserName = currentUser.name;
+            break;
+          }
+        } catch (e) {
+          console.error('Erreur lecture utilisateur actif', e);
         }
-      } catch (e) {
-        console.error('Erreur utilisateur actif', e);
       }
     }
+
+    // 3. Forcer l'application du nom de l'utilisateur connecté en priorité absolue
+    if (activeUserName) {
+      currentReport.engineerName = activeUserName;
+    }
+
+    setReportData(currentReport);
   }, []);
 
   const handlePrint = () => {
@@ -96,9 +116,6 @@ export default function ReportsPage() {
               <span>Tableau de bord</span>
             </Link>
 
-            
-
-            
             <Link href="/dashboard/reports" className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-red-600/90 to-red-700/70 rounded-xl shadow-[0_4px_25px_rgba(220,38,38,0.4)] border border-red-500/40 transition">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
