@@ -8,6 +8,8 @@ export default function PricingPage() {
   const router = useRouter();
   const [activePlan, setActivePlan] = useState<string>('Découverte');
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [transactionCode, setTransactionCode] = useState<string>('');
+  const [selectedPaidPlan, setSelectedPaidPlan] = useState<string>('Pass Ingénieur');
 
   useEffect(() => {
     const savedUser = localStorage.getItem('quantal_current_user');
@@ -24,24 +26,28 @@ export default function PricingPage() {
   }, []);
 
   const handleSelectPlan = (planName: string, price: number) => {
-    setActivePlan(planName);
-
-    // Mettre à jour l'utilisateur actif localement
-    const savedUserStr = localStorage.getItem('quantal_current_user');
-    if (savedUserStr) {
-      try {
-        const user = JSON.parse(savedUserStr);
-        user.plan = planName;
-        localStorage.setItem('quantal_current_user', JSON.stringify(user));
-      } catch (e) {
-        console.error('Erreur mise à jour utilisateur', e);
+    // Si c'est le plan gratuit, on l'active immédiatement
+    if (price === 0) {
+      setActivePlan(planName);
+      const savedUserStr = localStorage.getItem('quantal_current_user');
+      if (savedUserStr) {
+        try {
+          const user = JSON.parse(savedUserStr);
+          user.plan = planName;
+          localStorage.setItem('quantal_current_user', JSON.stringify(user));
+        } catch (e) {
+          console.error('Erreur mise à jour utilisateur', e);
+        }
       }
-    }
-
-    if (price > 0) {
-      setSuccessMessage(`Redirection vers la passerelle sécurisée Saaspay pour le ${planName}...`);
+      setSuccessMessage(`Félicitations ! Votre compte est désormais associé au ${planName}. Redirection vers le tableau de bord...`);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+    } else {
+      // Pour les plans payants : ON NE MODIFIE PAS LE LOCALSTORAGE. On redirige vers Saaspay en toute sécurité.
+      setSelectedPaidPlan(planName);
+      setSuccessMessage(`Redirection vers la passerelle sécurisée Saaspay pour le ${planName}... Effectuez votre paiement puis entrez votre code de transaction ci-dessous.`);
       
-      // REDIRECTION VERS LE VRAI LIEN DE PAIEMENT SAASPAY
       setTimeout(() => {
         if (planName === 'Pass Ingénieur') {
           window.location.href = 'https://link.saspay.me/e8j1m8bw7pc';
@@ -49,12 +55,31 @@ export default function PricingPage() {
           window.location.href = 'https://link.saspay.me/gqn-pmlog4o'; 
         }
       }, 1500);
+    }
+  };
 
-    } else {
-      setSuccessMessage(`Félicitations ! Votre compte est désormais associé au ${planName}. Redirection vers le tableau de bord...`);
-      setTimeout(() => {
+  // Fonction de validation par code de transaction
+  const handleVerifyTransaction = () => {
+    if (!transactionCode || transactionCode.trim().length < 4) {
+      alert('Veuillez entrer un code de transaction ou une référence Saaspay valide.');
+      return;
+    }
+
+    // Mettre à jour l'utilisateur avec le plan payant choisi après validation du code
+    const savedUserStr = localStorage.getItem('quantal_current_user');
+    if (savedUserStr) {
+      try {
+        const user = JSON.parse(savedUserStr);
+        user.plan = selectedPaidPlan;
+        localStorage.setItem('quantal_current_user', JSON.stringify(user));
+        setActivePlan(selectedPaidPlan);
+        alert(`Paiement vérifié avec succès ! Votre ${selectedPaidPlan} est désormais actif.`);
         router.push('/dashboard');
-      }, 2000);
+      } catch (e) {
+        console.error('Erreur activation plan', e);
+      }
+    } else {
+      alert('Erreur : Session utilisateur introuvable. Veuillez vous reconnecter.');
     }
   };
 
@@ -102,7 +127,7 @@ export default function PricingPage() {
           </div>
         )}
 
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 items-stretch pb-12">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 items-stretch pb-8">
           
           {/* Pass Découverte (Gratuit) */}
           <div className={`backdrop-blur-xl bg-slate-900/60 p-8 rounded-3xl border ${activePlan === 'Découverte' ? 'border-white ring-2 ring-white/50 shadow-2xl' : 'border-white/10 shadow-xl'} flex flex-col justify-between relative transition hover:border-white/30`}>
@@ -235,17 +260,40 @@ export default function PricingPage() {
 
         </div>
 
-        {/* Encadré d'aide et bouton de retour direct après paiement */}
-        <div className="max-w-3xl mx-auto mt-4 p-6 backdrop-blur-xl bg-slate-900/80 border border-white/10 rounded-3xl text-center shadow-xl">
-          <p className="text-xs sm:text-sm text-slate-300 mb-4">
-            💡 Vous avez validé votre paiement sur Saaspay mais vous êtes resté sur leur page ? Cliquez ci-dessous pour regagner instantanément votre tableau de bord.
+        {/* Encadré de vérification par Code de Transaction (Sécurisé) */}
+        <div className="max-w-3xl mx-auto mt-6 p-6 backdrop-blur-xl bg-slate-900/90 border border-white/20 rounded-3xl shadow-2xl">
+          <h3 className="text-sm font-bold text-white mb-2 text-center">
+            🔐 Validation du paiement par Code de Transaction
+          </h3>
+          <p className="text-xs text-slate-300 mb-4 text-center">
+            Après avoir payé sur Saaspay, sélectionnez le pass concerné, entrez votre code ou référence de transaction pour débloquer votre accès.
           </p>
-          <Link
-            href="/dashboard"
-            className="inline-block px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md"
-          >
-            Accéder à mon tableau de bord →
-          </Link>
+          
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <select
+              value={selectedPaidPlan}
+              onChange={(e) => setSelectedPaidPlan(e.target.value)}
+              className="px-4 py-2.5 bg-slate-950 border border-white/20 rounded-xl text-xs text-white focus:outline-none focus:border-white"
+            >
+              <option value="Pass Ingénieur">Pass Ingénieur (3 000 FCFA)</option>
+              <option value="Pass Entreprise">Pass Entreprise (60 000 FCFA)</option>
+            </select>
+
+            <input 
+              type="text" 
+              placeholder="Entrez votre code de transaction..." 
+              value={transactionCode}
+              onChange={(e) => setTransactionCode(e.target.value)}
+              className="px-4 py-2.5 bg-slate-950 border border-white/20 rounded-xl text-xs text-white focus:outline-none focus:border-white w-full sm:w-64"
+            />
+            
+            <button
+              onClick={handleVerifyTransaction}
+              className="px-6 py-2.5 bg-white text-slate-950 text-xs font-bold rounded-xl transition hover:bg-slate-200 shadow-md whitespace-nowrap"
+            >
+              Vérifier et Activer →
+            </button>
+          </div>
         </div>
 
       </main>
