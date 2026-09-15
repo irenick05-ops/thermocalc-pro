@@ -24,17 +24,9 @@ export default function PricingPage() {
   }, []);
 
   const handleSelectPlan = (planName: string, price: number) => {
-    // Vérification de la configuration Saaspay pour les abonnements payants
-    const saaspayConfig = JSON.parse(localStorage.getItem('quantal_saaspay_config') || '{}');
-    
-    if (!saaspayConfig.publicKey && price > 0) {
-      alert("Veuillez configurer vos clés API Saaspay dans les paramètres avant d'encaisser des abonnements payants.");
-      return;
-    }
-
     setActivePlan(planName);
 
-    // Mettre à jour l'utilisateur actif avec le nouveau pass
+    // Mettre à jour l'utilisateur actif localement
     const savedUserStr = localStorage.getItem('quantal_current_user');
     if (savedUserStr) {
       try {
@@ -46,16 +38,24 @@ export default function PricingPage() {
       }
     }
 
-    // Notification et Redirection vers le tableau de bord ou la passerelle
     if (price > 0) {
-      setSuccessMessage(`Redirection vers la passerelle sécurisée Saaspay.me pour le ${planName}...`);
+      setSuccessMessage(`Redirection vers la passerelle sécurisée Saaspay pour le ${planName}...`);
+      
+      // REDIRECTION VERS LE VRAI LIEN DE PAIEMENT SAASPAY
+      setTimeout(() => {
+        if (planName === 'Pass Ingénieur') {
+          window.location.href = 'https://link.saspay.me/e8j1m8bw7pc';
+        } else if (planName === 'Pass Entreprise') {
+          window.location.href = 'https://link.saspay.me/gqn-pmlog4o'; 
+        }
+      }, 1500);
+
     } else {
       setSuccessMessage(`Félicitations ! Votre compte est désormais associé au ${planName}. Redirection vers le tableau de bord...`);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
     }
-
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 2000);
   };
 
   return (
@@ -116,7 +116,6 @@ export default function PricingPage() {
               <h3 className="text-xl font-extrabold text-white">Pass Découverte</h3>
               <p className="text-sm text-slate-400 mt-1">Idéal pour tester les capacités de calcul.</p>
               
-              {/* Bloc Prix Professionnel & Harmonisé */}
               <div className="my-6 flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">0</span>
                 <span className="text-sm sm:text-base font-semibold text-slate-300">FCFA</span>
@@ -162,7 +161,6 @@ export default function PricingPage() {
               <h3 className="text-xl font-extrabold text-white">Pass Ingénieur</h3>
               <p className="text-sm text-slate-300 mt-1">Conçu pour les ingénieurs procédés en cabinet ou bureau d'études.</p>
               
-              {/* Bloc Prix Professionnel & Harmonisé */}
               <div className="my-6 flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">30 000</span>
                 <span className="text-sm sm:text-base font-semibold text-slate-300">FCFA</span>
@@ -186,7 +184,7 @@ export default function PricingPage() {
             </div>
 
             <button
-              onClick={() => handleSelectPlan('Pass Ingénieur', 30000)}
+              onClick={() => handleSelectPlan('Pass Ingénieur', 3000)}
               className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold transition shadow-xl ${activePlan === 'Pass Ingénieur' ? 'bg-white/10 text-slate-300 border border-white/20' : 'bg-white text-slate-950 hover:bg-slate-200'}`}
             >
               {activePlan === 'Pass Ingénieur' ? 'Pass Actuel' : 'JE CHOISI'}
@@ -205,7 +203,6 @@ export default function PricingPage() {
               <h3 className="text-xl font-extrabold text-white">Pass Entreprise</h3>
               <p className="text-sm text-slate-400 mt-1">Pour les départements d'ingénierie multi-utilisateurs.</p>
               
-              {/* Bloc Prix Professionnel & Harmonisé */}
               <div className="my-6 flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">60 000</span>
                 <span className="text-sm sm:text-base font-semibold text-slate-300">FCFA</span>
@@ -237,6 +234,20 @@ export default function PricingPage() {
           </div>
 
         </div>
+
+        {/* Encadré d'aide et bouton de retour direct après paiement */}
+        <div className="max-w-3xl mx-auto mt-4 p-6 backdrop-blur-xl bg-slate-900/80 border border-white/10 rounded-3xl text-center shadow-xl">
+          <p className="text-xs sm:text-sm text-slate-300 mb-4">
+            💡 Vous avez validé votre paiement sur Saaspay mais vous êtes resté sur leur page ? Cliquez ci-dessous pour regagner instantanément votre tableau de bord.
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-block px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md"
+          >
+            Accéder à mon tableau de bord →
+          </Link>
+        </div>
+
       </main>
     </div>
   );
