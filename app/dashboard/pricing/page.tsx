@@ -162,7 +162,7 @@ export default function PricingPage() {
               <p className="text-sm text-slate-300 mt-1">Conçu pour les ingénieurs procédés en cabinet ou bureau d'études.</p>
               
               <div className="my-6 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">30 000</span>
+                <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">3 000</span>
                 <span className="text-sm sm:text-base font-semibold text-slate-300">FCFA</span>
                 <span className="text-xs text-slate-400">/ mois</span>
               </div>
